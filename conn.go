@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/mdlayher/netlink"
+	"github.com/pkg/errors"
 	"github.com/ti-mo/netfilter"
 )
 
@@ -115,6 +116,22 @@ func (c *Conn) Rename(from, to string) error {
 
 func (c *Conn) Swap(from, to string) error {
 	return c.execute(CmdSwap, 0, newMovePolicy(from, to))
+}
+
+func (c *Conn) List(name string) (SetPolicy, error) {
+	set := SetPolicy{}
+	nlm, err := c.query(CmdList, netlink.Dump, newNamePolicy(name))
+	if err != nil {
+		return set, err
+	}
+
+	if len(nlm) > 1 {
+		return set, errors.Errorf("more than one netlink message received. %v", nlm)
+	}
+
+	err = unmarshalMessage(nlm[0], &set)
+
+	return set, err
 }
 
 func (c *Conn) ListAll() ([]SetPolicy, error) {
